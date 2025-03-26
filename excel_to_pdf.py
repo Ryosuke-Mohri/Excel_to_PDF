@@ -10,11 +10,8 @@ def convert_excel_to_pdf(excel_path, output_folder):
     """
     指定したExcelファイル内の全シートをPDFに変換して保存する関数。
     PDFのファイル名は "{Excelファイルのファイル名}_{シート名}.pdf" 形式。
-    
-    :param excel_path: Excelファイルのパス（相対パスでも可）
-    :param output_folder: PDF出力先フォルダ（絶対パス推奨）
     """
-    # 絶対パスに変換（Excel COMは絶対パスでの指定が安定します）
+    # 絶対パスに変換（Excelは絶対パスでの指定が安定のため）
     abs_excel_path = os.path.abspath(excel_path)
     
     # Excelファイルの存在確認
@@ -74,7 +71,7 @@ def convert_excel_to_pdf(excel_path, output_folder):
         excel.Quit()
 
 def main():
-    # 絶対パスに変換（出力先は絶対パスにしておくと安心）
+    # 絶対パスに変換（保存時挙動の安定性向上のため）
     abs_output_folder = os.path.abspath(OUTPUT_FOLDER)
     if not os.path.exists(abs_output_folder):
         try:
