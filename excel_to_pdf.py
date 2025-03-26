@@ -3,8 +3,8 @@ import traceback
 import win32com.client
 
 # グローバル変数として、元フォルダと出力フォルダのパスを定義
-SOURCE_FOLDER = r"C:\Path\To\Source\Folder"
-OUTPUT_FOLDER = r"C:\Path\To\Output\Folder"
+SOURCE_FOLDER = "input"
+OUTPUT_FOLDER = "output"
 
 def convert_excel_to_pdf(excel_path, output_folder):
     
