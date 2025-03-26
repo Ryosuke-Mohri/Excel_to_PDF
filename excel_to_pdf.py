@@ -3,77 +3,94 @@ import traceback
 import win32com.client
 
 # グローバル変数として、元フォルダと出力フォルダのパスを定義
-SOURCE_FOLDER = "input"
-OUTPUT_FOLDER = "output"
+SOURCE_FOLDER = r"input"
+OUTPUT_FOLDER = r"output"
 
 def convert_excel_to_pdf(excel_path, output_folder):
+    """
+    指定したExcelファイル内の全シートをPDFに変換して保存する関数。
+    PDFのファイル名は "{Excelファイルのファイル名}_{シート名}.pdf" 形式。
     
-    # 指定したExcelファイル内の全シートをPDFに変換して保存する関数
+    :param excel_path: Excelファイルのパス（相対パスでも可）
+    :param output_folder: PDF出力先フォルダ（絶対パス推奨）
+    """
+    # 絶対パスに変換（Excel COMは絶対パスでの指定が安定します）
+    abs_excel_path = os.path.abspath(excel_path)
+    
+    # Excelファイルの存在確認
+    if not os.path.exists(abs_excel_path):
+        print(f"ファイルが存在しません: {abs_excel_path}")
+        return
 
-    # Excelアプリケーションのインスタンス生成
     try:
+        # Excelアプリケーションのインスタンス生成
         excel = win32com.client.Dispatch("Excel.Application")
-        excel.Visible = False       # Excelウィンドウを非表示にする
+        excel.Visible = False       # Excelウィンドウを非表示
         excel.DisplayAlerts = False # ダイアログの自動抑制
     except Exception as e:
         print(f"Excelアプリケーションの作成エラー: {e}")
         return
 
-    # Excelファイルをオープン
+    workbook = None
     try:
-        workbook = excel.Workbooks.Open(excel_path)
-    except Exception as e:
-        print(f"ワークブックオープンエラー ({excel_path}): {e}")
-        excel.Quit()
-        return
+        # Excelファイルをオープン
+        workbook = excel.Workbooks.Open(abs_excel_path)
+        if workbook is None:
+            print(f"Workbookがオープンできませんでした: {abs_excel_path}")
+            return
 
-    # Excelファイル名（拡張子を除く）を取得
-    base_filename = os.path.splitext(os.path.basename(excel_path))[0]
-    
-    try:
-        # ワークブック内の各シートを処理
+        # 拡張子を除いたExcelファイル名を取得
+        base_filename = os.path.splitext(os.path.basename(excel_path))[0]
+        
+        # ワークブック内の各シートに対して処理
         for sheet in workbook.Worksheets:
             try:
                 sheet_name = sheet.Name
-                # Windowsでファイル名に使えない文字を除去
+                # Windowsのファイル名で使えない文字を除去
                 invalid_chars = '<>:"/\\|?*'
                 for char in invalid_chars:
                     sheet_name = sheet_name.replace(char, '')
                 
-                # 出力先ファイルパスを生成
+                # 出力先のファイルパス生成
                 output_file = os.path.join(output_folder, f"{base_filename}_{sheet_name}.pdf")
                 
-                # シートをPDFに変換（0はPDF形式を意味する）
+                # シートをPDFにエクスポート（0はPDF形式）
                 sheet.ExportAsFixedFormat(0, output_file)
                 print(f"変換成功: {output_file}")
             except Exception as e:
                 print(f"シート変換エラー (シート名: {sheet.Name}, ファイル: {excel_path}): {e}")
                 traceback.print_exc()
-                continue  # 次のシートへ処理を継続
+                continue  # 次のシートへ
     except Exception as e:
-        print(f"シート走査中のエラー ({excel_path}): {e}")
+        print(f"ワークブックオープンエラー ({excel_path}): {e}")
+        traceback.print_exc()
     finally:
-        # ワークブックを閉じ、Excelアプリケーションを終了
-        workbook.Close(False)
+        # ワークブックが正常にオープンしていれば閉じる
+        try:
+            if workbook:
+                workbook.Close(False)
+        except Exception as e:
+            print(f"ワークブックのクローズ中にエラー: {e}")
         excel.Quit()
 
 def main():
-    # 出力フォルダが存在しない場合は作成する
-    if not os.path.exists(OUTPUT_FOLDER):
+    # 絶対パスに変換（出力先は絶対パスにしておくと安心）
+    abs_output_folder = os.path.abspath(OUTPUT_FOLDER)
+    if not os.path.exists(abs_output_folder):
         try:
-            os.makedirs(OUTPUT_FOLDER)
+            os.makedirs(abs_output_folder)
         except Exception as e:
-            print(f"出力フォルダ作成エラー ({OUTPUT_FOLDER}): {e}")
+            print(f"出力フォルダ作成エラー ({abs_output_folder}): {e}")
             return
 
-    # 指定フォルダ内のサブディレクトリも含む全Excelファイルを走査
+    # 指定フォルダ内（サブディレクトリ含む）の全Excelファイルを処理
     for root, dirs, files in os.walk(SOURCE_FOLDER):
         for file in files:
             if file.lower().endswith(".xlsx"):
                 excel_file_path = os.path.join(root, file)
+                print(f"処理開始: {excel_file_path}")
                 try:
-                    print(f"処理開始: {excel_file_path}")
-                    convert_excel_to_pdf(excel_file_path, OUTPUT_FOLDER)
+                    convert_excel_to_pdf(excel_file_path, abs_output_folder)
                 except Exception as e:
                     print(f"ファイル処理中エラー ({excel_file_path}): {e}")
                     traceback.print_exc()
